@@ -1,46 +1,70 @@
-select count(e.id), m.NameMusgen from Executors e
-left join Musical_genres m on e.id = m.id
-group by m.namemusgen;
+-- Количество исполнителей в каждом жанре
+select mg.NameMusgen, count(me.execut_id) from Musical_genres mg
+join Musgen_Execut me on me.musgen_id = mg.id 
+group by mg.namemusgen;
 
-select count(t.id), a.namealbum  from Tracks t
-left join albums a on t.id = a.id
-where a.yearalbum between 2019 and 2020
-group by a.namealbum;
+-- Количество треков, вошедших в альбомы 2019–2020 годов
+select count(t.nametrack)  from Tracks t
+join albums a on t.id = a.id
+where a.yearalbum between 2019 and 2020;
 
+-- Средняя продолжительность треков по каждому альбому
 select a.namealbum, t.NameTrack, avg(t.Durarion) from Tracks t
-left join albums a on t.id = a.id
+join albums a on t.id = a.id
 group by a.namealbum, t.nametrack;
 
+-- Все исполнители, которые не выпустили альбомы в 2020 году
 select e.NameExecut from Executors e
-left join albums a on e.id = a.id
-where a.yearalbum < 2020
-group by e.NameExecut;
+where e.nameexecut not in (
+	select e.nameexecut from executors e
+	join execut_album ea on e.id = ea.execut_id 
+	join albums a on ea.execut_id  = a.id 
+	where a.yearalbum = 2020
+);
 
+-- Названия сборников, в которых присутствует конкретный исполнитель
 select c.NameCollect from Collections c
-left join Executors e on c.id = e.id
-where e.NameExecut = 'Sara Clark'
-group by c.NameCollect;
+join track_collect tc  on c.id = tc.collect_id 
+join tracks t on t.id  = tc.track_id 
+join albums a on a.id = t.album_id 
+join execut_album ea on ea.album_id = a.id 
+join executors e on e.id  = ea.execut_id 
+where e.NameExecut = 'Sara Clark';
 
+-- Названия альбомов, в которых присутствуют исполнители более чем одного жанра
 select a.NameAlbum from Albums a
-left join Executors e on a.id = e.id
-join Musical_genres on e.id = Musical_genres.id
-group by a.NameAlbum
-having  count(Musical_genres.namemusgen) > 1;
+join execut_album ea on a.id = ea.album_id 
+join Executors e on ea.execut_id  = e.id
+join musgen_execut me on e.id = me.execut_id 
+group by a.NameAlbum, e.id 
+having count (me.musgen_id) > 1;
 
-select t.nametrack, c.namecollect from tracks t 
-left join collections c on t.id = c.id 
-where c.namecollect is null 
-group by c.namecollect, t.nametrack;
+-- Наименования треков, которые не входят в сборники
+select t.nametrack from tracks t 
+left join track_collect tc  on t.id = tc.track_id  
+where tc.track_id is null;
 
-select e.nameexecut, min(t.durarion) from executors e 
-left join tracks t on e.id = t.id 
-group by t.durarion, e.nameexecut
-limit 2;
+-- Исполнитель или исполнители, написавшие самый короткий по продолжительности трек, — теоретически таких треков может быть несколько
+select e.nameexecut from executors e 
+left join execut_album ea on e.id = ea.execut_id 
+left join albums a on ea.album_id = a.id 
+left join tracks t on a.id  = t.album_id 
+group by e.nameexecut, t.durarion
+having t.durarion = (
+	select min(t.durarion) from tracks t2  
+	limit 1
+);
 
-select a.namealbum, count(t.nametrack) from albums a 
-left join tracks t on a.id  = t.id 
-group by a.namealbum, t.nametrack
-limit 2;
+-- Названия альбомов, содержащих наименьшее количество треков
+select a.namealbum from albums a 
+join tracks t on a.id  = t.album_id 
+group by a.namealbum
+having count(t.id) = (
+			select count(t.id) from tracks t2
+			join albums a2 on t2.id = a2.id 
+			group by a2.namealbum 
+			order by count(t2.id)
+			limit 1);
 
 
 

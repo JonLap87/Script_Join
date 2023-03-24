@@ -49,10 +49,8 @@ select e.nameexecut from executors e
 left join execut_album ea on e.id = ea.execut_id 
 left join albums a on ea.album_id = a.id 
 left join tracks t on a.id  = t.album_id 
-group by e.nameexecut, t.durarion
-having t.durarion = (
-	select min(t.durarion) from tracks t2  
-	limit 1
+where t.durarion = (
+	select min(t2.durarion) from tracks t2  
 );
 
 -- Названия альбомов, содержащих наименьшее количество треков
